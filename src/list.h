@@ -2,13 +2,9 @@
 #define GARBAGE_COLLECTOR_LIST_H_
 #include "gc.h"
 
-typedef struct dlist {
-  collectorBlock *head, *tail;
-} dlist;
-
 void init_list(dlist *);
 int length(dlist);
-void insert_beginning(dlist *, int);
+void insert_beginning(dlist *, collectorBlock *c);
 void insert_at(dlist *, int data, int index);
 void append(dlist *, int);
 int remove_first(dlist *);

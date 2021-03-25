@@ -5,6 +5,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h> // For sbrk
+#include <string.h>
+#include <setjmp.h>
+#include <stdint.h>
+
+uint8_t *__rsp;
+
+#define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
+#define GETNEXT(a) (void *)(((collectorBlock *)((unsigned char *)a - sizeof(collectorBlock))) -> next)
+#define GETPREV(a) (void *)(((collectorBlock *)((unsigned char *)a - sizeof(collectorBlock))) -> prev)
+#define GETSIZE(a) (((collectorBlock *)((unsigned char *)a - sizeof(collectorBlock))) -> size)
 
 /*
     Make sure you can collate the global roots. These are the local and global
@@ -32,27 +42,38 @@
     POSSIBLE: Set the quota to twice the total size of all allocated values.
 */
 
-#define CBLOCK_SIZE 17
+#define CBLOCK_SIZE sizeof(collectorBlock)
 
+// Every node in the free/non-free list
 typedef struct collectorBlock {
-  size_t size;
-  char free;
   struct collectorBlock *next, *prev;
+  int size;
+  char free;
 } collectorBlock;
 
+// A doubly linked list
+typedef struct dlist {
+  collectorBlock *head, *tail;
+} dlist;
+
+// The actual Garbage Collector Object
 typedef struct garbageCollector {
   void *stack_top, *stack_bottom, *heap_top, *heap_bottom;
   collectorBlock *free, *alloc;
-  size_t mallocs, frees, bytes_alloc, blocks_alloc;
+  int mallocs, frees, bytes_alloc, blocks_alloc;
 } garbageCollector;
 
+garbageCollector GC; // Global GC object
+
 void init(garbageCollector *gc);
-void *gc_malloc(garbageCollector *gc, size_t size);
-void gc_calloc(garbageCollector *gc, size_t num_blocks, size_t size);
-void gc_realloc(garbageCollector *gc, void *ptr, size_t size);
+void *gc_malloc(garbageCollector *gc, int size);
+void gc_calloc(garbageCollector *gc, int num_blocks, int size);
+void gc_realloc(garbageCollector *gc, void *ptr, int size);
 void gc_free(garbageCollector *gc);
 void gc_mark(garbageCollector *gc);
 void gc_sweep(garbageCollector *gc);
 void gc_defragment(garbageCollector *gc);
 
 #endif
+
+// ***** keep in mind after accessing next and prev add subtract 24 to get the actual structure

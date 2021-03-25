@@ -9,6 +9,8 @@
 #include <setjmp.h>
 #include <stdint.h>
 
+#include "hashset.h"
+
 uint8_t *__rsp;
 
 #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
@@ -58,9 +60,10 @@ typedef struct dlist {
 
 // The actual Garbage Collector Object
 typedef struct garbageCollector {
-  void *stack_top, *stack_bottom, *heap_top, *heap_bottom;
+  void *stack_top, *stack_bottom, *heap_top;
   collectorBlock *free, *alloc;
   int mallocs, frees, bytes_alloc, blocks_alloc;
+  set_t addresses;
 } garbageCollector;
 
 garbageCollector GC; // Global GC object

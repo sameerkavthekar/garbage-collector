@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdint.h>
 
 typedef struct hash_node {
-	void *data;
-	void *key;
+	char data;
+	uintptr_t *key;
 	struct hash_node *next;
 } hash_node;
 
@@ -13,7 +14,8 @@ typedef struct hash_map {
 	int size;
 } hash_map;
 
-void initMap(hash_map *m, int sizek);
-int add_node(hash_map *m, void *key, void *value);
-int remove_node(hash_map *m, void *key);
-int search_node(hash_map *m, void *key);
+void initMap(hash_map *m, int size);
+int add_node(hash_map *m, uintptr_t *key, char value);
+int remove_node(hash_map *m, uintptr_t *key);
+int search_node(hash_map *m, uintptr_t *key);
+void destroy_map(hash_map *m);

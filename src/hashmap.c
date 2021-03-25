@@ -1,19 +1,24 @@
 #include "hashmap.h"
 
 void initMap(hash_map *m, int size) {
-	m->buckets = (hash_node **)malloc(sizeof(hash_node *) * size);
+
+	if (size < 1)
+		return;
+
+	m->buckets = (hash_node **)malloc(size * sizeof(hash_node *));
 	if (!m->buckets) return;
 
 	for (int i = 0; i <= size; i++)
 		m->buckets[i] = NULL;
 
 	m->size = size;
+
 	return;
 }
 
 // Jenkin's 32 bit hash function
-int hash_function(void *key) {
-	unsigned int a = (long)key;
+int hash_function(uintptr_t *key) {
+	long a = (long)key;
 	a = (a + 0x7ed55d16) + (a << 12);
 	a = (a ^ 0xc761c23c) ^ (a >> 19);
 	a = (a + 0x165667b1) + (a << 5);
@@ -23,14 +28,17 @@ int hash_function(void *key) {
 	return (int)a;
 }
 
-int add_node(hash_map *m, void *key, void *value) {
+int add_node(hash_map *m, uintptr_t *key, char value) {
+	if (search_node(m, key))
+		return 0;
+
 	hash_node *nn = (hash_node *)malloc(sizeof(hash_node));
-	if(!nn) return;
+	if (!nn) return 0;
 	nn->data = value;
 	nn->key = key;
 	nn->next = NULL;
 
-	int index = hash_function(key) % m->size;
+	int index = hash_function(key) & (m->size - 1);
 
 	hash_node *temp = m->buckets[index];
 	nn->next = temp;
@@ -39,9 +47,79 @@ int add_node(hash_map *m, void *key, void *value) {
 	return 1;
 }
 
-int main() {
-	void *x = (void *)0x3264527;
-	int a = hash_function(x);
-	printf("%d\n", a);
+int search_node(hash_map *m, uintptr_t *key) {
+	int index = hash_function(key) & (m->size - 1);
+	hash_node *p = m->buckets[index];
+
+	while (p) {
+		if (p->key == key)
+			return 1;
+		p = p->next;
+	}
+
 	return 0;
+}
+
+int remove_node(hash_map *m, uintptr_t *key) {
+	int index = hash_function(key) & (m->size - 1);
+	hash_node *p = m->buckets[index];
+
+	if (!p)
+		return 0;
+
+	if (p->key == key) {
+		m->buckets[index] = p->next;
+		free(p);
+		return 1;
+	}
+
+	hash_node *q = NULL;
+
+	while (p) {
+		if (p->key == key) {
+			q->next = p->next;
+			free(p);
+			return 1;
+		}
+		q = p;
+		p = p->next;
+	}
+
+	if (!q) {
+		if (p->key == key) {
+			m->buckets[index] = NULL;
+			free(p);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+void print_contents(hash_map h) {
+	for (int i = 0; i <= h.size; i++) {
+		printf("%d: ", i);
+		hash_node *p  = h.buckets[i];
+		while (p) {
+			printf("%p ", (void *)p->key);
+			p = p->next;
+		}
+		printf("\n");
+	}
+}
+
+void destroy_map(hash_map *m) {
+	if (!m) return;
+
+	for (int i = 0; i <= m->size; i++) {
+		hash_node *p = m->buckets[i];
+		hash_node *q = NULL;
+		while(p) {
+			q = p->next;
+			free(p);
+			p = q;
+		}
+		m->buckets[i] = NULL;
+	}
+	free(m->buckets);
 }

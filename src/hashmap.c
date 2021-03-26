@@ -1,6 +1,6 @@
 #include "hashmap.h"
 
-void initMap(hash_map *m, int size) {
+void initMap(map_t *m, int size) {
 
 	if (size < 1)
 		return;
@@ -28,10 +28,7 @@ int hash_function(uintptr_t *key) {
 	return (int)a;
 }
 
-int add_node(hash_map *m, uintptr_t *key, char value) {
-	if (search_node(m, key))
-		return 0;
-
+int add_node(map_t *m, uintptr_t *key, uintptr_t * value) {
 	hash_node *nn = (hash_node *)malloc(sizeof(hash_node));
 	if (!nn) return 0;
 	nn->data = value;
@@ -40,6 +37,15 @@ int add_node(hash_map *m, uintptr_t *key, char value) {
 
 	int index = hash_function(key) & (m->size - 1);
 
+	hash_node *p = m->buckets[index];
+	while (p) {
+		if (p->key == key) {
+			p->data = value;
+			return 0;
+		}
+		p = p->next;
+	}
+
 	hash_node *temp = m->buckets[index];
 	nn->next = temp;
 	m->buckets[index] = nn;
@@ -47,7 +53,7 @@ int add_node(hash_map *m, uintptr_t *key, char value) {
 	return 1;
 }
 
-int search_node(hash_map *m, uintptr_t *key) {
+int search_node(map_t *m, uintptr_t *key) {
 	int index = hash_function(key) & (m->size - 1);
 	hash_node *p = m->buckets[index];
 
@@ -60,7 +66,7 @@ int search_node(hash_map *m, uintptr_t *key) {
 	return 0;
 }
 
-int remove_node(hash_map *m, uintptr_t *key) {
+int remove_node(map_t *m, uintptr_t *key) {
 	int index = hash_function(key) & (m->size - 1);
 	hash_node *p = m->buckets[index];
 
@@ -96,25 +102,26 @@ int remove_node(hash_map *m, uintptr_t *key) {
 	return 0;
 }
 
-void print_contents(hash_map h) {
+void print_contents(map_t h) {
+	printf("HASHMAP:\n");
 	for (int i = 0; i <= h.size; i++) {
 		printf("%d: ", i);
 		hash_node *p  = h.buckets[i];
 		while (p) {
-			printf("%p ", (void *)p->key);
+			printf("%p:%p ", (void *)p->key, (void *)p->data);
 			p = p->next;
 		}
 		printf("\n");
 	}
 }
 
-void destroy_map(hash_map *m) {
+void destroy_map(map_t *m) {
 	if (!m) return;
 
 	for (int i = 0; i <= m->size; i++) {
 		hash_node *p = m->buckets[i];
 		hash_node *q = NULL;
-		while(p) {
+		while (p) {
 			q = p->next;
 			free(p);
 			p = q;

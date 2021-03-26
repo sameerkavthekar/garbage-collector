@@ -68,14 +68,14 @@ typedef struct garbageCollector {
 
 garbageCollector GC; // Global GC object
 
-void init(garbageCollector *gc);
-void *gc_malloc(garbageCollector *gc, int size);
-void gc_calloc(garbageCollector *gc, int num_blocks, int size);
-void gc_realloc(garbageCollector *gc, void *ptr, int size);
-void gc_free(garbageCollector *gc);
-void gc_mark(garbageCollector *gc);
-void gc_sweep(garbageCollector *gc);
-void gc_defragment(garbageCollector *gc);
+void init();
+void *gc_malloc(int size);
+void gc_calloc(int num_blocks, int size);
+void gc_realloc(void *ptr, int size);
+void gc_free(void *ptr);
+void gc_mark();
+void gc_sweep();
+void gc_defragment();
 
 #endif
 

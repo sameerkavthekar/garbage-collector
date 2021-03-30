@@ -14,5 +14,6 @@ int insert(set_t *s, uintptr_t *key);
 int remov(set_t *s, uintptr_t *key);
 int search(set_t s, uintptr_t *key);
 void destroy(set_t *s);
+hash_node *get_iter(set_t *s);
 
 #endif

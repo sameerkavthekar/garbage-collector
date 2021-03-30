@@ -59,14 +59,14 @@ typedef struct dlist {
 } dlist;
 
 // The actual Garbage Collector Object
-typedef struct garbageCollector {
+struct {
   void *stack_top, *stack_bottom, *heap_top;
   collectorBlock *free, *alloc;
   int mallocs, frees, bytes_alloc, blocks_alloc;
   set_t addresses;
-} garbageCollector;
+} GC;
 
-garbageCollector GC; // Global GC object
+// garbageCollector GC; // Global GC object
 
 void init();
 void *gc_malloc(int size);

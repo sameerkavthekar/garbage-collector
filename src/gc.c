@@ -1,5 +1,7 @@
 #include "gc.h"
 
+map_t *getRoots();
+
 typedef struct hello {
   int a;
   struct hello *next;
@@ -24,16 +26,46 @@ void init() {
   init_set(&(GC.addresses));
 }
 
+// void gc_mark(map_t *A) {
+//   int e = 0;
+//   for (int i = 0; i < 10; i++) {
+//     uint8_t * left = A[i] ? (uint8_t *) * (A[i]) : NULL;
+//     printf("%p\n", left);
+//     // uint8_t * right = (uint8_t *)(*(A[i]) + GETSIZE(*(A[i])));
+//     //   while (left < right) {
+//     //     if (search(GC.addresses, (uintptr_t *) * (uintptr_t *)left)) {
+//     //       printf("%p\n", (void *) * A[i]);
+//     //       e++;
+//     //     }
+//     //     left++;
+//     //   }
+//   }
+//   printf("%d\n", e);
+// }
+
+void gc_run() {
+  // Roots
+  // Mark
+  // Sweep
+  // Compact
+
+  map_t *m = getRoots();
+
+  // gc_mark(m);
+
+
+}
+
 void *gc_malloc(int size) {
   void *block = (void *)malloc(sizeof(collectorBlock) + size);
-  // if (!block) {
-  //   gc_run();
-  //   void *block = (void *)malloc(sizeof(collectorBlock) + size);
-  //   if(!block) {
-  //     printf("Out of Memory\n");
-  //     exit(0);
-  //   }
-  // }
+  if (!block) {
+    gc_run();
+    void *block = (void *)malloc(sizeof(collectorBlock) + size);
+    if (!block) {
+      printf("Out of Memory\n");
+      exit(0);
+    }
+  }
 
   collectorBlock node;
   node.next = NULL;
@@ -42,6 +74,8 @@ void *gc_malloc(int size) {
   node.free = '0';
 
   memcpy(block, &node, sizeof(collectorBlock));
+
+  printf("BLOCK: %p\n", block + sizeof(collectorBlock));
 
   if (!block)
     return NULL;
@@ -65,43 +99,39 @@ void *gc_malloc(int size) {
   }
 }
 
-uintptr_t **getRoots () {
+map_t *getRoots () {
+
+  jmp_buf jb; // Saving contents of registers on the stack
+  setjmp(jb);
+
   __READ_RSP();
-  uintptr_t **A = (uintptr_t **)calloc(10, sizeof(uintptr_t *));
+  map_t *m = (map_t *)malloc(sizeof(map_t));
+  initMap(m, 16);
 
   uint8_t * bottom = __rsp;
   uint8_t * top = (uint8_t *)GC.stack_top;
-  int i = 0;
   while (bottom < top) {
     if (search(GC.addresses, (uintptr_t *) * (uintptr_t *)bottom)) {
-      A[i++] = (uintptr_t *)bottom;
+      add_node(m, (uintptr_t *) * (uintptr_t *)bottom, (uintptr_t *)bottom);
     }
     bottom++;
   }
-
-  return A;
+  print_contents(*m);
+  return m;
 }
 
 int main() {
   init(&GC);
+
   hello *a = (hello *)gc_malloc(sizeof(hello));
+  hello *e = (hello *)gc_malloc(sizeof(hello));
+  a->next = e;
+  e = NULL;
   hello *d = (hello *)gc_malloc(sizeof(hello));
   test *c = (test *)gc_malloc(sizeof(test));
   hello *b = (hello *)gc_malloc(sizeof(hello));
 
-  jmp_buf jb;
-  setjmp(jb);
-
-  uintptr_t **A = getRoots();
-
-  __READ_RSP();
-  int e = 0;
-  for (int i = 0; i < 10; i++) {
-    if (A[i] >= (uintptr_t *)__rsp)
-      e++;
-  }
-
-  printf("E: %d\n", e);
+  gc_run();
 
   return 0;
 }

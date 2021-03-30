@@ -12,7 +12,6 @@ typedef struct hash_node {
 	uintptr_t * data;
 	uintptr_t *key;
 	struct hash_node *next;
-	int index;
 } hash_node;
 
 typedef struct hash_map {

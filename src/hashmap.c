@@ -130,3 +130,10 @@ void destroy_map(map_t *m) {
 	}
 	free(m->buckets);
 }
+
+hash_node **get_map_iter(map_t *m) {
+	if(!m)
+		return NULL;
+
+	return m->buckets;
+}

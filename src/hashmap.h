@@ -27,5 +27,6 @@ int remove_node(map_t *m, uintptr_t *key);
 int search_node(map_t *m, uintptr_t *key);
 void destroy_map(map_t *m);
 void print_contents(map_t h);
+hash_node **get_map_iter(map_t *m);
 
 #endif

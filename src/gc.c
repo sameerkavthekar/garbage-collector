@@ -1,6 +1,7 @@
 #include "gc.h"
 
 map_t *getRoots();
+void gc_dump();
 
 typedef struct hello {
   int a;
@@ -26,22 +27,54 @@ void init() {
   init_set(&(GC.addresses));
 }
 
-// void gc_mark(map_t *A) {
-//   int e = 0;
-//   for (int i = 0; i < 10; i++) {
-//     uint8_t * left = A[i] ? (uint8_t *) * (A[i]) : NULL;
-//     printf("%p\n", left);
-//     // uint8_t * right = (uint8_t *)(*(A[i]) + GETSIZE(*(A[i])));
-//     //   while (left < right) {
-//     //     if (search(GC.addresses, (uintptr_t *) * (uintptr_t *)left)) {
-//     //       printf("%p\n", (void *) * A[i]);
-//     //       e++;
-//     //     }
-//     //     left++;
-//     //   }
-//   }
-//   printf("%d\n", e);
-// }
+void mark_helper(uintptr_t *p) {
+  if (!p)
+    return;
+
+  if (IS_MARKED((uintptr_t *)p))
+    return;
+
+  MARK(p);
+  uint8_t *left = (uint8_t *)(p);
+  uint8_t *right = (uint8_t *)((uint8_t *)(p) + GETSIZE(p));
+
+  while (left < right) {
+    if (search(GC.addresses, (uintptr_t *) * (uintptr_t *)left)) {
+      mark_helper((uintptr_t *) * (uintptr_t *)left);
+    }
+    left++;
+  }
+
+  return;
+}
+
+
+void gc_mark() {
+  map_t *m = getRoots();
+  hash_node **n = get_map_iter(m);
+
+  for (int i = 0; i < m->size; i++) {
+    hash_node *p = n[i];
+    while (p) {
+      MARK(p->key);
+      uint8_t *left = (uint8_t *)(p->key);
+      uint8_t *right = (uint8_t *)((uint8_t *)(p->key) + GETSIZE(p->key));
+
+      while (left < right) {
+        if (search(GC.addresses, (uintptr_t *) * (uintptr_t *)left)) {
+          mark_helper((uintptr_t *) * (uintptr_t *)left);
+        }
+        left++;
+      }
+      p = p->next;
+    }
+  }
+
+
+  free(m);
+  m = NULL;
+  gc_dump();
+}
 
 void gc_run() {
   // Roots
@@ -49,9 +82,7 @@ void gc_run() {
   // Sweep
   // Compact
 
-  map_t *m = getRoots();
-
-  // gc_mark(m);
+  gc_mark();
 
 
 }
@@ -59,6 +90,7 @@ void gc_run() {
 void *gc_malloc(int size) {
   void *block = (void *)malloc(sizeof(collectorBlock) + size);
   if (!block) {
+    printf("HERE\n");
     gc_run();
     void *block = (void *)malloc(sizeof(collectorBlock) + size);
     if (!block) {
@@ -71,11 +103,11 @@ void *gc_malloc(int size) {
   node.next = NULL;
   node.prev = NULL;
   node.size = size;
-  node.free = '0';
+  node.free = 0;
 
   memcpy(block, &node, sizeof(collectorBlock));
 
-  printf("BLOCK: %p\n", block + sizeof(collectorBlock));
+  // printf("BLOCK: %p\n", block + sizeof(collectorBlock));
 
   if (!block)
     return NULL;
@@ -116,7 +148,6 @@ map_t *getRoots () {
     }
     bottom++;
   }
-  print_contents(*m);
   return m;
 }
 
@@ -125,13 +156,32 @@ int main() {
 
   hello *a = (hello *)gc_malloc(sizeof(hello));
   hello *e = (hello *)gc_malloc(sizeof(hello));
+  hello *f = (hello *)gc_malloc(sizeof(hello));
   a->next = e;
+  e->next = f;
+  f = NULL;
   e = NULL;
   hello *d = (hello *)gc_malloc(sizeof(hello));
+  d->next = NULL;
   test *c = (test *)gc_malloc(sizeof(test));
   hello *b = (hello *)gc_malloc(sizeof(hello));
+  b->next = NULL;
+
 
   gc_run();
 
   return 0;
+}
+
+void gc_dump() {
+  collectorBlock *p = GC.alloc;
+
+  if (!p)
+    return;
+
+  printf("GARBAGE COLLECTOR: \n");
+  while (p) {
+    printf("block address: %p, memory address: %p, mark: %d, size: %d\n", p, (uint8_t *)p + sizeof(collectorBlock), p->free, p->size);
+    p = p->next;
+  }
 }

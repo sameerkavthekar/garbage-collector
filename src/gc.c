@@ -12,9 +12,6 @@ typedef struct test {
   char a, b, c, d;
 } test;
 
-// TODO: IMPLEMENT A VECTOR TO HOLD ALL ROOTS
-
-
 void init() {
   GC.frees = 0;
   GC.mallocs = 0;
@@ -70,10 +67,8 @@ void gc_mark() {
     }
   }
 
-
-  free(m);
-  m = NULL;
-  gc_dump();
+  destroy_map(m);
+  return;
 }
 
 void gc_run() {
@@ -83,14 +78,13 @@ void gc_run() {
   // Compact
 
   gc_mark();
-
-
+  // gc_sweep();
+  // gc_compact();
 }
 
 void *gc_malloc(int size) {
   void *block = (void *)malloc(sizeof(collectorBlock) + size);
   if (!block) {
-    printf("HERE\n");
     gc_run();
     void *block = (void *)malloc(sizeof(collectorBlock) + size);
     if (!block) {
@@ -101,7 +95,6 @@ void *gc_malloc(int size) {
 
   collectorBlock node;
   node.next = NULL;
-  node.prev = NULL;
   node.size = size;
   node.free = 0;
 
@@ -151,8 +144,21 @@ map_t *getRoots () {
   return m;
 }
 
+void gc_dump() {
+  collectorBlock *p = GC.alloc;
+
+  if (!p)
+    return;
+
+  printf("GARBAGE COLLECTOR: \n");
+  while (p) {
+    printf("block address: %p, memory address: %p, mark: %d, size: %d\n", p, (uint8_t *)p + sizeof(collectorBlock), p->free, p->size);
+    p = p->next;
+  }
+}
+
 int main() {
-  init(&GC);
+  gc_init();
 
   hello *a = (hello *)gc_malloc(sizeof(hello));
   hello *e = (hello *)gc_malloc(sizeof(hello));
@@ -167,21 +173,9 @@ int main() {
   hello *b = (hello *)gc_malloc(sizeof(hello));
   b->next = NULL;
 
-
   gc_run();
 
+  gc_dump();
+
   return 0;
-}
-
-void gc_dump() {
-  collectorBlock *p = GC.alloc;
-
-  if (!p)
-    return;
-
-  printf("GARBAGE COLLECTOR: \n");
-  while (p) {
-    printf("block address: %p, memory address: %p, mark: %d, size: %d\n", p, (uint8_t *)p + sizeof(collectorBlock), p->free, p->size);
-    p = p->next;
-  }
 }

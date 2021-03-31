@@ -2,12 +2,12 @@
 #define GARBAGE_COLLECTOR_GC_H_
 
 #include <stddef.h> // For size_t
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdio.h>  // I/O
+#include <stdlib.h> // For dynamic memory allocation
 #include <unistd.h> // For sbrk
-#include <string.h>
-#include <setjmp.h>
-#include <stdint.h>
+#include <string.h> // For memcpy
+#include <setjmp.h> // For jmp_buf
+#include <stdint.h> // For uint8_t and uintptr_t
 
 #include "hashset.h"
 
@@ -19,46 +19,14 @@ uint8_t *__rsp;
 #define GETSIZE(a) (((collectorBlock *)((uint8_t *)a - sizeof(collectorBlock))) -> size)
 #define MARK(a) ((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free = 1
 #define IS_MARKED(a) ((((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free) == 1)
-
-/*
-    Make sure you can collate the global roots. These are the local and global
-   variables that contain references into the heap.
-
-   POSSIBLE: For local variables, push
-   them on to a shadow stack for the duration of their scope.
-
-    Make sure you can traverse the heap, e.g. every value in the heap is an
-   object that implements a Visit method.
-
-    Keep the list of all allocated values.
-
-    Allocate by calling malloc and inserting the pointer into the listS of all
-   allocated values.
-
-    When the total size of all allocated values exceeds a quota, kick off the
-   mark and then sweep phases. This recursively traverses the heap accumulating
-   the set of all reachable values.
-
-    The list difference of the allocated values minus the reachable values is
-   the list of unreachable values. Iterate over them calling free and removing
-   them from the list of allocated values.
-
-    POSSIBLE: Set the quota to twice the total size of all allocated values.
-*/
-
 #define CBLOCK_SIZE sizeof(collectorBlock)
 
 // Every node in the free/non-free list
 typedef struct collectorBlock {
-  struct collectorBlock *next, *prev;
+  struct collectorBlock *next;
   int size;
   char free;
 } collectorBlock;
-
-// A doubly linked list
-typedef struct dlist {
-  collectorBlock *head, *tail;
-} dlist;
 
 // The actual Garbage Collector Object
 struct {
@@ -68,17 +36,28 @@ struct {
   set_t addresses;
 } GC;
 
-// garbageCollector GC; // Global GC object
+// Function gc_init()
+// Params: None
+// Returns: void
+// Purpose: Initialises the garbage collector object by setting many required values
+void gc_init();
 
-void init();
+// Function gc_malloc()
+// Params: Size of the block
+// Returns: A pointer to the malloced memory
+// Purpose: Helps in dynamic memory allocation and registers addresses of all valid objects
 void *gc_malloc(int size);
-void gc_calloc(int num_blocks, int size);
-void gc_realloc(void *ptr, int size);
+
+// Function gc_free()
+// Params: Address of block to be freed
+// Returns: void
+// Purpose: Frees the block that was allocated by gc_malloc
 void gc_free(void *ptr);
-void gc_mark();
-void gc_sweep();
-void gc_defragment();
+
+// Function gc_run()
+// Params: None
+// Returns: void
+// Purpose: It is used to run the garbage collector any time in the program cycle
+void gc_run();
 
 #endif
-
-// ***** keep in mind after accessing next and prev add subtract 24 to get the actual structure

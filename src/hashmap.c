@@ -129,6 +129,9 @@ void destroy_map(map_t *m) {
 		m->buckets[i] = NULL;
 	}
 	free(m->buckets);
+	free(m);
+	m = NULL;
+	return;
 }
 
 hash_node **get_map_iter(map_t *m) {

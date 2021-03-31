@@ -11,29 +11,27 @@
 
 #include "hashset.h"
 
-uint8_t *__rsp;
+extern uint8_t *__rsp;
 
 #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
-#define GETNEXT(a) (void *)(((collectorBlock *)((uint8_t *)a - sizeof(collectorBlock))) -> next)
-#define GETPREV(a) (void *)(((collectorBlock *)((uint8_t *)a - sizeof(collectorBlock))) -> prev)
 #define GETSIZE(a) (((collectorBlock *)((uint8_t *)a - sizeof(collectorBlock))) -> size)
 #define MARK(a) ((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free = 1
+#define UNMARK(a) ((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free = 0
 #define IS_MARKED(a) ((((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free) == 1)
 #define CBLOCK_SIZE sizeof(collectorBlock)
 
 // Every node in the free/non-free list
 typedef struct collectorBlock {
-  struct collectorBlock *next;
-  int size;
-  char free;
+	int size;
+	char free;
 } collectorBlock;
 
 // The actual Garbage Collector Object
-struct {
-  void *stack_top, *stack_bottom, *heap_top;
-  collectorBlock *free, *alloc;
-  int mallocs, frees, bytes_alloc, blocks_alloc;
-  set_t addresses;
+extern struct gc {
+	void *stack_top, *stack_bottom, *heap_top;
+	collectorBlock *free, *alloc;
+	int mallocs, frees, bytes_alloc, blocks_alloc;
+	set_t addresses;
 } GC;
 
 // Function gc_init()
@@ -59,5 +57,11 @@ void gc_free(void *ptr);
 // Returns: void
 // Purpose: It is used to run the garbage collector any time in the program cycle
 void gc_run();
+
+// Function gc_dump()
+// Params: None
+// Returns: void
+// Purpose: It is used to print the contents of garbage collector any time in the program cycle
+void gc_dump();
 
 #endif

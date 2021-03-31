@@ -1,18 +1,8 @@
 #include "gc.h"
 
 map_t *getRoots();
-void gc_dump();
 
-typedef struct hello {
-  int a;
-  struct hello *next;
-} hello;
-
-typedef struct test {
-  char a, b, c, d;
-} test;
-
-void init() {
+void gc_init() {
   GC.frees = 0;
   GC.mallocs = 0;
   GC.stack_top = __builtin_frame_address(1);
@@ -71,6 +61,26 @@ void gc_mark() {
   return;
 }
 
+void gc_sweep() {
+  hash_node **n = get_set_iter(&(GC.addresses));
+
+  if (!n)
+    return;
+
+  for (int i = 0; i < get_set_size(GC.addresses); i++) {
+    hash_node *p = n[i];
+    while (p) {
+      if (!IS_MARKED(p->key)) {
+        gc_free(p->key);
+      }
+      else {
+        UNMARK(p->key);
+      }
+      p = p->next;
+    }
+  }
+}
+
 void gc_run() {
   // Roots
   // Mark
@@ -78,7 +88,8 @@ void gc_run() {
   // Compact
 
   gc_mark();
-  // gc_sweep();
+  gc_dump();
+  gc_sweep();
   // gc_compact();
 }
 
@@ -94,34 +105,34 @@ void *gc_malloc(int size) {
   }
 
   collectorBlock node;
-  node.next = NULL;
   node.size = size;
   node.free = 0;
 
   memcpy(block, &node, sizeof(collectorBlock));
 
-  // printf("BLOCK: %p\n", block + sizeof(collectorBlock));
-
   if (!block)
     return NULL;
 
   insert(&(GC.addresses), (uintptr_t *)(block + sizeof(collectorBlock)));
+  GC.blocks_alloc++;
+  GC.bytes_alloc += sizeof(collectorBlock) + size;
+  memcpy(block, &node, sizeof(collectorBlock));
+  return block + sizeof(collectorBlock);
+}
 
-  if (!GC.alloc) {
-    GC.alloc = block;
-    GC.blocks_alloc++;
-    GC.bytes_alloc += sizeof(block) + size;
-    return block + sizeof(collectorBlock);
-  }
-  else {
-    node.next = GC.alloc;
-    node.next->prev = block;
-    GC.alloc = block;
-    GC.blocks_alloc++;
-    GC.bytes_alloc += sizeof(block) + size;
-    memcpy(block, &node, sizeof(collectorBlock));
-    return block + sizeof(collectorBlock);
-  }
+void gc_free(void *ptr) {
+  if (!ptr)
+    return;
+
+  if (!search(GC.addresses, (uintptr_t *)ptr))
+    return;
+
+  int size = GETSIZE(ptr);
+  free((uint8_t *)ptr - sizeof(collectorBlock));
+  remov(&(GC.addresses), (uintptr_t *)ptr);
+  GC.blocks_alloc--;
+  GC.bytes_alloc -= sizeof(collectorBlock) + size;
+  return;
 }
 
 map_t *getRoots () {
@@ -145,37 +156,20 @@ map_t *getRoots () {
 }
 
 void gc_dump() {
-  collectorBlock *p = GC.alloc;
+  hash_node **n = get_set_iter(&(GC.addresses));
 
-  if (!p)
+  if (!n)
     return;
 
   printf("GARBAGE COLLECTOR: \n");
-  while (p) {
-    printf("block address: %p, memory address: %p, mark: %d, size: %d\n", p, (uint8_t *)p + sizeof(collectorBlock), p->free, p->size);
-    p = p->next;
+  for (int i = 0; i < get_set_size(GC.addresses); i++) {
+    hash_node *p = n[i];
+    while (p) {
+      uint8_t *q = (uint8_t *)(p->key) - sizeof(collectorBlock);
+      printf("block address: %p, memory address: %p, mark: %d, size: %d\n", q, p->key, IS_MARKED(p->key), GETSIZE(p->key));
+      p = p->next;
+    }
   }
-}
 
-int main() {
-  gc_init();
-
-  hello *a = (hello *)gc_malloc(sizeof(hello));
-  hello *e = (hello *)gc_malloc(sizeof(hello));
-  hello *f = (hello *)gc_malloc(sizeof(hello));
-  a->next = e;
-  e->next = f;
-  f = NULL;
-  e = NULL;
-  hello *d = (hello *)gc_malloc(sizeof(hello));
-  d->next = NULL;
-  test *c = (test *)gc_malloc(sizeof(test));
-  hello *b = (hello *)gc_malloc(sizeof(hello));
-  b->next = NULL;
-
-  gc_run();
-
-  gc_dump();
-
-  return 0;
+  return;
 }

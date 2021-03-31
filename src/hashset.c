@@ -20,3 +20,14 @@ int search(set_t s, uintptr_t *key) {
 void destroy(set_t *s) {
 	destroy_map(&(s->m));
 }
+
+hash_node **get_set_iter(set_t *s) {
+	if(!s)
+		return NULL;
+
+	return s->m.buckets;
+}
+
+int get_set_size(set_t s) {
+	return s.m.size;
+}

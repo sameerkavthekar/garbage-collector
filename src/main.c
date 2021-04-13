@@ -11,9 +11,6 @@ typedef struct test {
   char a, b, c, d;
 } test;
 
-struct gc GC;
-uint8_t *__rsp;
-
 int main(int argc, char **argv) {
 
   gc_init(argc, argv);
@@ -21,8 +18,8 @@ int main(int argc, char **argv) {
   hello *a = (hello *)gc_malloc(sizeof(hello));
   hello *e = (hello *)gc_malloc(sizeof(hello));
   hello *f = (hello *)gc_malloc(sizeof(hello));
-  // a->next = e;
-  e->next = f;
+  a->next = e;
+  // e->next = f;
   f = NULL;
   e = NULL;
   hello *d = (hello *)gc_malloc(sizeof(hello));
@@ -30,7 +27,7 @@ int main(int argc, char **argv) {
   hello *b = (hello *)gc_malloc(sizeof(hello));
   gc_run();
 
-  // gc_dump();
+  gc_dump();
 
   return 0;
 }

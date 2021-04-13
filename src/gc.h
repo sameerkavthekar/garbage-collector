@@ -10,7 +10,7 @@
 
 #include "hashset.h"
 
-extern uint8_t *__rsp;
+static uint8_t *__rsp;
 
 #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
 #define GETSIZE(a)                                                             \
@@ -32,7 +32,7 @@ typedef struct collectorBlock {
 } collectorBlock;
 
 // The actual Garbage Collector Object
-extern struct gc {
+static struct gc {
   void *stack_top, *stack_bottom, *heap_top;
   int mallocs, frees, bytes_alloc, blocks_alloc;
   set_t addresses;

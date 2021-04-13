@@ -1,5 +1,7 @@
 #include "gc.h"
+#include "hashmap.h"
 #include <stdint.h>
+#include <string.h>
 
 map_t *getRoots();
 
@@ -46,8 +48,80 @@ void mark_helper(uintptr_t *p) {
   return;
 }
 
-void gc_mark() {
-  map_t *m = getRoots();
+void computeLocations() {
+  collectorBlock *p = GC.block_head;
+  collectorBlock *q = GC.block_head;
+  while (p) {
+    if (p->free == 1) {
+      p->forwarding_address = (uint8_t *)q;
+      q = q->next;
+    }
+    p = p->next;
+  }
+}
+
+void updateReferences(map_t *m) {
+  hash_node **n = get_set_iter(&(GC.addresses));
+
+  for (int i = 0; i < m->size; i++) {
+    hash_node *p = n[i];
+    while (p) {
+      uintptr_t *ref = p->key;
+      if (ref) {
+        p->key = (uintptr_t *)(((collectorBlock *)ref)->forwarding_address);
+      }
+      p = p->next;
+    }
+  }
+
+  collectorBlock *p = GC.block_head;
+  printf("\n\n");
+  while (p) {
+    printf(
+        "block address: %p, memory address: %p, mark: %d, size: %d, fwd: %p\n",
+        p, (uint8_t *)p + CBLOCK_SIZE, p->free, p->size, p->forwarding_address);
+    p = p->next;
+  }
+  print_contents(GC.addresses.m);
+
+  p = GC.block_head;
+
+  while (p) {
+    if (p->free == 1) {
+      uint8_t *start = (uint8_t *)p + CBLOCK_SIZE;
+      uint8_t *end = (uint8_t *)p + CBLOCK_SIZE + p->size;
+      while (start < end) {
+        if (search(GC.addresses, (uintptr_t *)*(uintptr_t *)start)) {
+          if (((uintptr_t *)*(uintptr_t *)start) != NULL) {
+            uintptr_t *ptr = (uintptr_t *)*(uintptr_t *)start;
+            *ptr = (uintptr_t)(((collectorBlock *)start)->forwarding_address);
+          }
+        }
+        start++;
+      }
+    }
+    p = p->next;
+  }
+
+  // Update linklist + hashmap refs
+
+  printf("\n\n");
+  return;
+}
+
+void relocate() {
+  collectorBlock *p = GC.block_head;
+
+  while (p) {
+    if (p->free == 1) {
+      uint8_t *dest = p->forwarding_address;
+      memmove(dest, p, p->size + CBLOCK_SIZE);
+    }
+    p = p->next;
+  }
+}
+
+void gc_mark(map_t *m) {
   hash_node **n = get_map_iter(m);
 
   for (int i = 0; i < m->size; i++) {
@@ -67,7 +141,6 @@ void gc_mark() {
     }
   }
 
-  destroy_map(m);
   return;
 }
 
@@ -90,21 +163,38 @@ void gc_sweep() {
   }
 }
 
+void gc_compact(map_t *m) {
+  uint8_t *end_heap = sbrk(0);
+  uint8_t *start_heap = GC.heap_top;
+  computeLocations();
+  updateReferences(m);
+  relocate();
+
+  return;
+}
+
 void gc_run() {
   // Roots
   // Mark
   // Sweep
   // Compact
 
-  gc_mark();
+  map_t *m = getRoots();
 
-  gc_sweep();
+  gc_mark(m);
 
-  collectorBlock *p = GC.block_head;
+  gc_dump();
 
   if (GC.compact_flag == 1) {
-    // gc_compact();
+    gc_compact(m);
   }
+
+  gc_dump();
+
+  // gc_sweep();
+
+  destroy_map(m);
+
   return;
 }
 
@@ -123,6 +213,7 @@ void *gc_malloc(int size) {
   node.size = size;
   node.free = 0;
   node.next = NULL;
+  node.forwarding_address = NULL;
 
   memcpy(block, &node, sizeof(collectorBlock));
 
@@ -212,7 +303,6 @@ map_t *getRoots() {
 
 void gc_dump() {
   hash_node **n = get_set_iter(&(GC.addresses));
-
   if (!n)
     return;
 

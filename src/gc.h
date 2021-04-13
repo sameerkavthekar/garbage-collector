@@ -26,6 +26,7 @@ extern uint8_t *__rsp;
 // Header to each block
 typedef struct collectorBlock {
   struct collectorBlock *next;
+  uint8_t *forwarding_address;
   int size;
   char free;
 } collectorBlock;

@@ -1,6 +1,4 @@
 #include "gc.h"
-#include <stdint.h>
-#include <unistd.h>
 
 typedef struct hello {
   int a;
@@ -18,13 +16,14 @@ int main(int argc, char **argv) {
   hello *a = (hello *)gc_malloc(sizeof(hello));
   hello *e = (hello *)gc_malloc(sizeof(hello));
   hello *f = (hello *)gc_malloc(sizeof(hello));
-  a->next = e;
+  // a->next = e;
   // e->next = f;
   f = NULL;
   e = NULL;
   hello *d = (hello *)gc_malloc(sizeof(hello));
   test *c = (test *)gc_malloc(sizeof(test));
   hello *b = (hello *)gc_malloc(sizeof(hello));
+
   gc_run();
 
   gc_dump();

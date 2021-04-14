@@ -33,8 +33,8 @@ typedef struct collectorBlock {
 
 // The actual Garbage Collector Object
 static struct gc {
-  void *stack_top, *stack_bottom, *heap_top;
-  int mallocs, frees, bytes_alloc, blocks_alloc;
+  void *stack_top;
+  int blocks_alloc;
   set_t addresses;
   collectorBlock *block_head, *block_tail;
   char compact_flag;

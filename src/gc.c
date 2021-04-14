@@ -1,10 +1,5 @@
 #include "gc.h"
 #include "hashmap.h"
-#include <stdint.h>
-#include <string.h>
-
-// MOVE VALID BLOCK TO FWDING ADDRESS POINTER AND FREE THE PTR AT THE VALID
-// ADDRESS HENCE DEFRAGMENTED
 
 map_t *getRoots();
 
@@ -19,11 +14,7 @@ void gc_init(int argc, char **argv) {
     }
   }
 
-  GC.frees = 0;
-  GC.mallocs = 0;
   GC.stack_top = __builtin_frame_address(1);
-  GC.heap_top = sbrk(0);
-  GC.bytes_alloc = 0;
   GC.blocks_alloc = 0;
   GC.block_head = NULL;
   GC.block_tail = NULL;
@@ -125,6 +116,28 @@ void updateReferences(map_t *m) {
     }
   }
 
+  p = GC.block_head;
+
+  while (p) {
+    if (p->free == 1) {
+      uintptr_t *start = (uintptr_t *)((uint8_t *)p + CBLOCK_SIZE);
+      uintptr_t *end = (uintptr_t *)((uint8_t *)p + CBLOCK_SIZE + p->size);
+      while (start < end) {
+        if (search(GC.addresses, (uintptr_t *)(*start))) {
+          if (((uintptr_t *)(*start)) != NULL) {
+            uintptr_t *ptr = (uintptr_t *)(*start);
+            *start = (uintptr_t)(
+                (uint8_t *)(((collectorBlock *)((uint8_t *)ptr - CBLOCK_SIZE))
+                                ->forwarding_address) +
+                CBLOCK_SIZE);
+          }
+        }
+        start = (uintptr_t *)((uint8_t *)start + 1);
+      }
+    }
+    p = p->next;
+  }
+
   return;
 }
 
@@ -211,7 +224,6 @@ void *gc_malloc(int size) {
 
   insert(&(GC.addresses), (uintptr_t *)(block + sizeof(collectorBlock)));
   GC.blocks_alloc++;
-  GC.bytes_alloc += sizeof(collectorBlock) + size;
   memcpy(block, &node, sizeof(collectorBlock));
 
   if (GC.compact_flag == 1) {
@@ -265,7 +277,6 @@ void gc_free(void *ptr) {
   free((uint8_t *)ptr - sizeof(collectorBlock));
   remov(&(GC.addresses), (uintptr_t *)ptr);
   GC.blocks_alloc--;
-  GC.bytes_alloc -= sizeof(collectorBlock) + size;
 
   return;
 }
@@ -291,20 +302,28 @@ map_t *getRoots() {
 }
 
 void gc_dump() {
-  hash_node **n = get_set_iter(&(GC.addresses));
-  if (!n)
-    return;
-
   printf("GARBAGE COLLECTOR: \n");
-  for (int i = 0; i < get_set_size(GC.addresses); i++) {
-    hash_node *p = n[i];
+  if (GC.compact_flag) {
+    collectorBlock *p = GC.block_head;
     while (p) {
-      uint8_t *q = (uint8_t *)(p->key) - sizeof(collectorBlock);
-      printf("block address: %p, memory address: %p, mark: %d, size: %d\n", q,
-             p->key, IS_MARKED(p->key), GETSIZE(p->key));
+      printf("block address: %p, memory address: %p, mark: %d, size: %d\n", p,
+             (uint8_t *)p + CBLOCK_SIZE, p->free, p->size);
       p = p->next;
     }
-  }
+  } else {
+    hash_node **n = get_set_iter(&(GC.addresses));
+    if (!n)
+      return;
 
+    for (int i = 0; i < get_set_size(GC.addresses); i++) {
+      hash_node *p = n[i];
+      while (p) {
+        uint8_t *q = (uint8_t *)(p->key) - sizeof(collectorBlock);
+        printf("block address: %p, memory address: %p, mark: %d, size: %d\n", q,
+               p->key, IS_MARKED(p->key), GETSIZE(p->key));
+        p = p->next;
+      }
+    }
+  }
   return;
 }

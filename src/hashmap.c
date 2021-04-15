@@ -16,7 +16,7 @@ void initMap(map_t *m, int size) {
 	return;
 }
 
-// Jenkin's 32 bit hash function
+// Jenkin's 32 bit hash function (Guarantee's a good hash)
 int hash_function(uintptr_t *key) {
 	long a = (long)key;
 	a = (a + 0x7ed55d16) + (a << 12);

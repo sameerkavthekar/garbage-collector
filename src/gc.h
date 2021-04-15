@@ -6,21 +6,16 @@
 #include <stdio.h>  // I/O
 #include <stdlib.h> // For dynamic memory allocation
 #include <string.h> // For memcpy
-#include <unistd.h> // For sbrk
 
 #include "hashset.h"
 
 static uint8_t *__rsp;
 
 #define __READ_RSP() __asm__ volatile("movq %%rsp, %0" : "=r"(__rsp))
-#define GETSIZE(a)                                                             \
-  (((collectorBlock *)((uint8_t *)a - sizeof(collectorBlock)))->size)
-#define MARK(a)                                                                \
-  ((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free = 1
-#define UNMARK(a)                                                              \
-  ((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free = 0
-#define IS_MARKED(a)                                                           \
-  ((((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free) == 1)
+#define GETSIZE(a) (((collectorBlock *)((uint8_t *)a - sizeof(collectorBlock)))->size)
+#define MARK(a) ((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free = 1
+#define UNMARK(a) ((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free = 0
+#define IS_MARKED(a) ((((collectorBlock *)(((uint8_t *)a) - sizeof(collectorBlock)))->free) == 1)
 #define CBLOCK_SIZE sizeof(collectorBlock)
 
 // Header to each block

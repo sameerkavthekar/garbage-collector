@@ -249,10 +249,11 @@ void gc_free(void *ptr) {
 
   if (GC.compact_flag == 1) {
     void *new_ptr = (uint8_t *)ptr - CBLOCK_SIZE;
-    collectorBlock *p = GC.block_head;
-    collectorBlock *q = NULL;
     if (GC.block_head == GC.block_tail)
       GC.block_head = GC.block_tail = NULL;
+
+    collectorBlock *p = GC.block_head;
+    collectorBlock *q = NULL;
 
     while (p) {
       if (p == new_ptr) {

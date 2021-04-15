@@ -30,9 +30,10 @@ int main(int argc, char **argv) {
 
   pop(&l);
   pop(&l);
+  pop(&l);
+  // pop(&l);
 
   print(l);
-  printf("\n\n");
 
   gc_run();
   gc_dump();

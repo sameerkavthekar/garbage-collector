@@ -2,9 +2,9 @@
 
 A  garbage collector library, made as a project for my DSA - II course, implemented in C language. 
 
-Name: Sameer Kavthekar
-MIS: 111903153
-Division 2
+Name: Sameer Kavthekar  
+MIS: 111903153  
+Division 2  
 
 
 # Features

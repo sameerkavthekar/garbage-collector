@@ -175,6 +175,7 @@ void relocate() {
 void gc_compact(map_t *m) {
   computeLocations();
   updateReferences(m);
+  destroy_map(m);
   relocate();
 
   return;
@@ -194,8 +195,6 @@ void gc_run() {
     gc_compact(m);
 
   gc_sweep();
-
-  destroy_map(m);
 
   return;
 }

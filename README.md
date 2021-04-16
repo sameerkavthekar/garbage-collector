@@ -38,7 +38,7 @@ The main functions of my program are:
 	 A function that compacts the memory i.e. it moves all the live objects 
 	 to the start of the heap.
 
-![](images/gc.jpg)
+![](images/GC.png)
 
 # Usage
 
@@ -59,3 +59,11 @@ Compile program by using
 ```
 gcc yourfiles.c gc.c hashmap.c hashset.c -o yourfile
 ```
+# References
+
+ - https://en.wikipedia.org/wiki/Tracing_garbage_collection
+ - http://dmitrysoshnikov.com/compilers/writing-a-mark-sweep-garbage-collector/
+ - https://www.youtube.com/watch?v=fGujNjkslvY
+ - https://www.hboehm.info/gc/
+ - https://en.wikipedia.org/wiki/Mark-compact_algorithm#LISP2_algorithm
+ - http://www.cs.tau.ac.il/~maon/teaching/2014-2015/seminar/seminar1415a-lec2-mark-sweep-mark-compact.pdf
